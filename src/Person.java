@@ -13,6 +13,5 @@ public abstract class Person {
     public String getID() { return ID; }
     public void setID(String ID) { this.ID = ID; }
 
-    // Phương thức abstract bắt buộc các class con phải implement
-    public abstract void hienThiThongTin();
+    public abstract void hienThiThongTin(LibraryManager manager);
 }
