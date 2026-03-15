@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="450.0" prefWidth="650.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="LibraryController">
+    <children>
+        <Label layoutX="240.0" layoutY="14.0" text="QUẢN LÝ THƯ VIỆN" textAlignment="CENTER">
+            <font><Font name="System Bold" size="20.0" /></font>
+        </Label>
+        <ComboBox fx:id="menu" layoutX="35.0" layoutY="45.0" prefWidth="180.0" />
+
+        <StackPane layoutX="35.0" layoutY="85.0" prefHeight="340.0" prefWidth="580.0">
+            <children>
+                <AnchorPane fx:id="paneDocGia" style="-fx-background-color: white;">
+                    <children>
+                        <TextField fx:id="txtTimKiemDocGia" layoutY="2.0" prefWidth="300.0" promptText="🔍 Tìm kiếm độc giả..." />
+                        <TableView fx:id="readerTable" layoutY="35.0" prefHeight="230.0" prefWidth="300.0">
+                            <columns>
+                                <TableColumn fx:id="readerIDCol" prefWidth="50.0" text="ID" />
+                                <TableColumn fx:id="readerNameCol" prefWidth="130.0" text="Tên độc giả" />
+                                <TableColumn fx:id="actionReaderCol" prefWidth="105.0" text="Thao tác" />
+                            </columns>
+                        </TableView>
+                        <TextArea fx:id="readerDetails" editable="false" layoutX="310.0" layoutY="35.0" prefHeight="150.0" prefWidth="270.0" promptText="Chi tiết mượn sách..." wrapText="true" />
+                        <TextField fx:id="txtNhapIdSach" layoutX="310.0" layoutY="195.0" prefWidth="270.0" promptText="Nhập ID Sách để mượn/trả..." />
+                        <Button fx:id="btnMuonSach" layoutX="310.0" layoutY="230.0" prefWidth="130.0" style="-fx-background-color: #2196F3; -fx-text-fill: white;" text="Mượn Sách" />
+                        <Button fx:id="btnTraSach" layoutX="450.0" layoutY="230.0" prefWidth="130.0" style="-fx-background-color: #FF9800; -fx-text-fill: white;" text="Trả Sách" />
+
+                        <Separator layoutY="275.0" prefWidth="300.0" />
+                        <TextField fx:id="txtThemIdDocGia" layoutY="290.0" prefWidth="60.0" promptText="ID" />
+                        <TextField fx:id="txtThemTenDocGia" layoutX="70.0" layoutY="290.0" prefWidth="150.0" promptText="Tên độc giả mới" />
+                        <Button fx:id="btnThemDocGia" layoutX="230.0" layoutY="290.0" prefWidth="70.0" style="-fx-background-color: #4CAF50; -fx-text-fill: white;" text="Thêm" />
+                    </children>
+                </AnchorPane>
+
+                <AnchorPane fx:id="paneSach" style="-fx-background-color: white;">
+                    <children>
+                        <TextField fx:id="txtTimKiemSach" layoutY="2.0" prefWidth="580.0" promptText="🔍 Tìm kiếm sách..." />
+                        <TableView fx:id="bookTable" layoutY="35.0" prefHeight="230.0" prefWidth="580.0">
+                            <columns>
+                                <TableColumn fx:id="bookID" prefWidth="80.0" text="ID" />
+                                <TableColumn fx:id="bookName" prefWidth="310.0" text="Tên sách" />
+                                <TableColumn fx:id="remaining" prefWidth="60.0" text="SL" />
+                                <TableColumn fx:id="actionBookCol" prefWidth="128.66665649414062" text="Thao tác" />
+                            </columns>
+                        </TableView>
+                        <TextField fx:id="txtThemIdSach" layoutY="290.0" prefWidth="70.0" promptText="ID Sách" />
+                        <TextField fx:id="txtThemTenSach" layoutX="80.0" layoutY="290.0" prefWidth="300.0" promptText="Tên sách mới" />
+                        <TextField fx:id="txtThemSoLuong" layoutX="390.0" layoutY="290.0" prefWidth="60.0" promptText="SL" />
+                        <Button fx:id="btnThemSach" layoutX="460.0" layoutY="290.0" prefWidth="120.0" style="-fx-background-color: #4CAF50; -fx-text-fill: white;" text="Nhập Kho" />
+                    </children>
+                </AnchorPane>
+            </children>
+        </StackPane>
+    </children>
+</AnchorPane>

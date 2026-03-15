@@ -6,7 +6,7 @@ public class Reader extends Person implements BookAction {
 
     @Override
     public void hienThiThongTin(LibraryManager manager) {
-        manager.layThongTinDocGiaDB(this.getID(), this.getName());
+//        manager.layThongTinDocGiaDB(this.getID(), this.getName());
     }
 
     @Override
