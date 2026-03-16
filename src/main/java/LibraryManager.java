@@ -1,3 +1,7 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,13 +64,35 @@ public class LibraryManager {
     }
 
     // --- CÁC HÀM NGHIỆP VỤ ---
-    public boolean themSachDB(Book b, int sl) {
-        String q = "INSERT INTO Books (id, name, remaining) VALUES (?, ?, ?)";
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
-             PreparedStatement p = conn.prepareStatement(q)) {
-            p.setString(1, b.getID()); p.setString(2, b.getName()); p.setInt(3, sl);
-            return p.executeUpdate() > 0;
-        } catch (SQLException e) { return false; }
+    public boolean themSachDB(Book book, int soLuongMoi) {
+        String checkQuery = "SELECT 1 FROM Books WHERE id = ?";
+        String updateQuery = "UPDATE Books SET remaining = remaining + ? WHERE id = ?";
+        String insertQuery = "INSERT INTO Books (id, name, remaining) VALUES (?, ?, ?)";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS)) {
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkQuery)) {
+                checkStmt.setString(1, book.getID());
+                ResultSet rs = checkStmt.executeQuery();
+
+                if (rs.next()) {
+                    try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                        updateStmt.setInt(1, soLuongMoi);
+                        updateStmt.setString(2, book.getID());
+                        return updateStmt.executeUpdate() > 0;
+                    }
+                } else {
+                    try (PreparedStatement insertStmt = conn.prepareStatement(insertQuery)) {
+                        insertStmt.setString(1, book.getID());
+                        insertStmt.setString(2, book.getName());
+                        insertStmt.setInt(3, soLuongMoi);
+                        return insertStmt.executeUpdate() > 0;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public boolean themDocGiaDB(Reader r) {
@@ -87,6 +113,7 @@ public class LibraryManager {
                 p1.setString(1, bID);
                 if (p1.executeUpdate() > 0) {
                     p2.setString(1, rID); p2.setString(2, bID); p2.executeUpdate();
+                    ghiLichSu(conn, rID, bID, "Mượn");
                     conn.commit(); return true;
                 }
             } catch (SQLException ex) { conn.rollback(); }
@@ -103,10 +130,111 @@ public class LibraryManager {
                 p1.setString(1, rID); p1.setString(2, bID);
                 if (p1.executeUpdate() > 0) {
                     p2.setString(1, bID); p2.executeUpdate();
+                    ghiLichSu(conn, rID, bID, "Trả");
                     conn.commit(); return true;
                 }
             } catch (SQLException ex) { conn.rollback(); }
         } catch (SQLException e) { e.printStackTrace(); }
         return false;
+    }
+
+    private void ghiLichSu(Connection conn, String readerID, String bookID, String action) throws SQLException {
+        String getBookName = "SELECT name FROM Books WHERE id = ?";
+        String insertHistory = "INSERT INTO TransactionHistory (readerID, bookID, actionType) VALUES (?, ?, ?)";
+
+        String bookName = "";
+        try (PreparedStatement ps = conn.prepareStatement(getBookName)) {
+            ps.setString(1, bookID);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) bookName = rs.getString("name");
+        }
+
+        try (PreparedStatement ps = conn.prepareStatement(insertHistory)) {
+            ps.setString(1, readerID);
+            ps.setString(2, bookID);
+            ps.setString(3, action);
+            ps.executeUpdate();
+        }
+    }
+
+    public String layLichSuMuonTra(String readerID) {
+        StringBuilder sb = new StringBuilder("\n--- LỊCH SỬ GIAO DỊCH ---\n");
+        String q = "SELECT h.bookID, b.name, h.actionType, h.transactionDate " +
+                "FROM TransactionHistory h " +
+                "JOIN Books b ON h.bookID = b.id " +
+                "WHERE h.readerID = ? " +
+                "ORDER BY h.transactionDate DESC";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+             PreparedStatement pstmt = conn.prepareStatement(q)) {
+            pstmt.setString(1, readerID);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                sb.append(String.format("[%s] %s: %s (Mã: %s)\n",
+                        rs.getTimestamp("transactionDate"),
+                        rs.getString("actionType"),
+                        rs.getString("name"),
+                        rs.getString("bookID")));
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return sb.toString();
+    }
+
+    public void xuatDanhSachSachTxt(List<Book> danhSach, String fileName) throws IOException {
+        try (PrintWriter writer = new PrintWriter(fileName, "UTF-8")) {
+            writer.println("===============================================================");
+            writer.println("                DANH SÁCH QUẢN LÝ SÁCH TRONG KHO               ");
+            writer.println("===============================================================");
+            writer.printf("%-10s | %-30s | %-10s\n", "Mã Sách", "Tên Đầu Sách", "Số Lượng");
+            writer.println("---------------------------------------------------------------");
+
+            for (Book b : danhSach) {
+                writer.printf("%-10s | %-30s | %-10d\n", b.getID(), b.getName(), b.getRemaining());
+            }
+            writer.println("===============================================================");
+        }
+    }
+
+    public void xuatChiTietDocGiaTxt(Reader reader, String fileName) throws IOException {
+        try (PrintWriter writer = new PrintWriter(fileName, "UTF-8")) {
+            String hienTai = layDanhSachSachDangMuon(reader.getID());
+            String lichSu = layLichSuMuonTra(reader.getID());
+
+            writer.println("===============================================================");
+            writer.println("                   CHI TIẾT THÔNG TIN ĐỘC GIẢ                  ");
+            writer.println("===============================================================");
+            writer.println("Tên độc giả: " + reader.getName());
+            writer.println("Mã số:       " + reader.getID());
+            writer.println("---------------------------------------------------------------");
+            writer.println(hienTai);
+            writer.println(lichSu);
+            writer.println("===============================================================");
+            writer.println("Ngày xuất file: " + new java.util.Date());
+        }
+    }
+
+    public int nhapSachTuFile(String filePath) throws IOException {
+        int count = 0;
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+
+                String[] data = line.split("\\|");
+                if (data.length == 3) {
+                    try {
+                        String id = data[0].trim();
+                        String name = data[1].trim();
+                        int sl = Integer.parseInt(data[2].trim());
+
+                       if (themSachDB(new Book(name, id), sl)) {
+                            count++;
+                        }
+                    } catch (NumberFormatException e) {
+                        System.err.println("Lỗi định dạng số lượng tại dòng: " + line);
+                    }
+                }
+            }
+        }
+        return count;
     }
 }

@@ -7,6 +7,11 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
+import javafx.stage.FileChooser;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
 
 public class LibraryController {
     @FXML private ComboBox<String> menu;
@@ -18,7 +23,7 @@ public class LibraryController {
     @FXML private TableColumn<Book, Integer> remaining;
     @FXML private TableColumn<Book, Void> actionBookCol;
     @FXML private TextField txtTimKiemSach, txtThemIdSach, txtThemTenSach, txtThemSoLuong;
-    @FXML private Button btnThemSach;
+    @FXML private Button btnThemSach, btnInSach, btnNhapFile;
 
     // TAB ĐỘC GIẢ
     @FXML private TableView<Reader> readerTable;
@@ -26,7 +31,7 @@ public class LibraryController {
     @FXML private TableColumn<Reader, Void> actionReaderCol;
     @FXML private TextArea readerDetails;
     @FXML private TextField txtTimKiemDocGia, txtNhapIdSach, txtThemIdDocGia, txtThemTenDocGia;
-    @FXML private Button btnMuonSach, btnTraSach, btnThemDocGia;
+    @FXML private Button btnMuonSach, btnTraSach, btnThemDocGia, btnInDocGia; // Thêm btnInDocGia
 
     private LibraryManager manager;
     private Reader currentSelectedReader = null;
@@ -36,32 +41,125 @@ public class LibraryController {
     @FXML
     public void initialize() {
         manager = new LibraryManager();
+
         setupTabs();
         setupTableColumns();
         setupSearch();
         setupActionButtons();
+
         refreshData();
     }
 
     private void setupTabs() {
         menu.getItems().addAll("Quản lý sách", "Quản lý độc giả");
         menu.setValue("Quản lý sách");
+
+        // Đảm bảo cả 2 Pane đều visible nhưng chỉ một cái lên trước
+        paneSach.setVisible(true);
+        paneDocGia.setVisible(true);
         paneSach.toFront();
+
         menu.setOnAction(e -> {
-            if ("Quản lý sách".equals(menu.getValue())) paneSach.toFront();
-            else paneDocGia.toFront();
+            if ("Quản lý sách".equals(menu.getValue())) {
+                paneSach.toFront();
+            } else {
+                paneDocGia.toFront();
+            }
         });
+    }
+
+    private void setupActionButtons() {
+        // Xử lý thêm sách
+        btnThemSach.setOnAction(e -> {
+            try {
+                int sl = Integer.parseInt(txtThemSoLuong.getText());
+                if (manager.themSachDB(new Book(txtThemTenSach.getText(), txtThemIdSach.getText()), sl)) {
+                    refreshData();
+                    txtThemIdSach.clear(); txtThemTenSach.clear(); txtThemSoLuong.clear();
+                }
+            } catch (Exception ex) { showAlert("Lỗi", "Dữ liệu nhập không hợp lệ!"); }
+        });
+
+        // Xử lý thêm độc giả
+        btnThemDocGia.setOnAction(e -> {
+            if (manager.themDocGiaDB(new Reader(txtThemTenDocGia.getText(), txtThemIdDocGia.getText()))) {
+                refreshData();
+                txtThemIdDocGia.clear(); txtThemTenDocGia.clear();
+            }
+        });
+
+        // Xử lý mượn/trả
+        btnMuonSach.setOnAction(e -> {
+            if (currentSelectedReader != null && manager.xuLyMuonSachDB(txtNhapIdSach.getText(), currentSelectedReader.getID())) {
+                refreshData(); updateReaderDetails();
+            } else showAlert("Lỗi", "Không thể mượn sách!");
+        });
+
+        btnTraSach.setOnAction(e -> {
+            if (currentSelectedReader != null && manager.xuLyTraSachDB(txtNhapIdSach.getText(), currentSelectedReader.getID())) {
+                refreshData(); updateReaderDetails();
+            } else showAlert("Lỗi", "Không thể trả sách!");
+        });
+
+        // KẾT NỐI NÚT IN (Quan trọng)
+        if (btnInSach != null) {
+            btnInSach.setOnAction(e -> handleInDanhSachSach());
+        }
+        if (btnInDocGia != null) {
+            btnInDocGia.setOnAction(e -> handleInChiTietDocGia());
+        }
+
+        btnNhapFile.setOnAction(e -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Chọn file dữ liệu nhập kho");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Text Files", "*.txt"));
+
+            // Mở cửa sổ chọn file
+            File selectedFile = fileChooser.showOpenDialog(paneSach.getScene().getWindow());
+
+            if (selectedFile != null) {
+                try {
+                    int thanhCong = manager.nhapSachTuFile(selectedFile.getAbsolutePath());
+                    refreshData(); // Cập nhật lại bảng sách ngay lập tức
+                    showAlert("Kết quả", "Đã nhập thành công " + thanhCong + " đầu sách vào kho!");
+                } catch (IOException ex) {
+                    showAlert("Lỗi", "Không thể đọc file: " + ex.getMessage());
+                }
+            }
+        });
+    }
+
+    private void handleInDanhSachSach() {
+        try {
+            List<Book> currentBooks = manager.layTatCaSach();
+            manager.xuatDanhSachSachTxt(currentBooks, "danh_sach_sach.txt");
+            showAlert("Thành công", "Đã in danh sách sách ra file danh_sach_sach.txt");
+        } catch (IOException e) {
+            showAlert("Lỗi", "Không thể in file: " + e.getMessage());
+        }
+    }
+
+    private void handleInChiTietDocGia() {
+        if (currentSelectedReader != null) {
+            try {
+                String fileName = "chi_tiet_" + currentSelectedReader.getID() + ".txt";
+                manager.xuatChiTietDocGiaTxt(currentSelectedReader, fileName);
+                showAlert("Thành công", "Đã in thông tin độc giả ra file " + fileName);
+            } catch (IOException e) {
+                showAlert("Lỗi", "Không thể in file: " + e.getMessage());
+            }
+        } else {
+            showAlert("Thông báo", "Vui lòng chọn một độc giả và nhấn 'Xem' trước khi in!");
+        }
     }
 
     private void setupTableColumns() {
         bookID.setCellValueFactory(new PropertyValueFactory<>("ID"));
         bookName.setCellValueFactory(new PropertyValueFactory<>("name"));
         remaining.setCellValueFactory(new PropertyValueFactory<>("remaining"));
-
         readerIDCol.setCellValueFactory(new PropertyValueFactory<>("ID"));
         readerNameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
 
-        // Nút Xóa Sách
         actionBookCol.setCellFactory(p -> new TableCell<>() {
             private final Button btn = new Button("Xóa");
             {
@@ -78,7 +176,6 @@ public class LibraryController {
             }
         });
 
-        // Nút Xem & Xóa Độc Giả
         actionReaderCol.setCellFactory(p -> new TableCell<>() {
             private final Button btnV = new Button("Xem"), btnD = new Button("Xóa");
             private final HBox box = new HBox(5, btnV, btnD);
@@ -114,37 +211,6 @@ public class LibraryController {
         readerTable.setItems(new SortedList<>(filterR));
     }
 
-    private void setupActionButtons() {
-        btnThemSach.setOnAction(e -> {
-            try {
-                int sl = Integer.parseInt(txtThemSoLuong.getText());
-                if (manager.themSachDB(new Book(txtThemTenSach.getText(), txtThemIdSach.getText()), sl)) {
-                    refreshData();
-                    txtThemIdSach.clear(); txtThemTenSach.clear(); txtThemSoLuong.clear();
-                }
-            } catch (Exception ex) { showAlert("Lỗi", "Dữ liệu nhập không hợp lệ!"); }
-        });
-
-        btnThemDocGia.setOnAction(e -> {
-            if (manager.themDocGiaDB(new Reader(txtThemTenDocGia.getText(), txtThemIdDocGia.getText()))) {
-                refreshData();
-                txtThemIdDocGia.clear(); txtThemTenDocGia.clear();
-            }
-        });
-
-        btnMuonSach.setOnAction(e -> {
-            if (currentSelectedReader != null && manager.xuLyMuonSachDB(txtNhapIdSach.getText(), currentSelectedReader.getID())) {
-                refreshData(); updateReaderDetails();
-            } else showAlert("Lỗi", "Không thể mượn sách!");
-        });
-
-        btnTraSach.setOnAction(e -> {
-            if (currentSelectedReader != null && manager.xuLyTraSachDB(txtNhapIdSach.getText(), currentSelectedReader.getID())) {
-                refreshData(); updateReaderDetails();
-            } else showAlert("Lỗi", "Không thể trả sách!");
-        });
-    }
-
     private void refreshData() {
         masterBookList.setAll(manager.layTatCaSach());
         masterReaderList.setAll(manager.layTatCaDocGia());
@@ -152,8 +218,14 @@ public class LibraryController {
 
     private void updateReaderDetails() {
         if (currentSelectedReader != null) {
-            String info = "ĐỘC GIẢ: " + currentSelectedReader.getName() + "\n" + manager.layDanhSachSachDangMuon(currentSelectedReader.getID());
-            readerDetails.setText(info);
+            String hienTai = manager.layDanhSachSachDangMuon(currentSelectedReader.getID());
+            String lichSu = manager.layLichSuMuonTra(currentSelectedReader.getID());
+            String tongHop = "ĐỘC GIẢ: " + currentSelectedReader.getName() + "\n"
+                    + "Mã số: " + currentSelectedReader.getID() + "\n"
+                    + "--------------------------\n"
+                    + hienTai + "\n"
+                    + lichSu;
+            readerDetails.setText(tongHop);
         }
     }
 
