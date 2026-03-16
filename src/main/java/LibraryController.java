@@ -54,7 +54,6 @@ public class LibraryController {
         menu.getItems().addAll("Quản lý sách", "Quản lý độc giả");
         menu.setValue("Quản lý sách");
 
-        // Đảm bảo cả 2 Pane đều visible nhưng chỉ một cái lên trước
         paneSach.setVisible(true);
         paneDocGia.setVisible(true);
         paneSach.toFront();
@@ -69,7 +68,6 @@ public class LibraryController {
     }
 
     private void setupActionButtons() {
-        // Xử lý thêm sách
         btnThemSach.setOnAction(e -> {
             try {
                 int sl = Integer.parseInt(txtThemSoLuong.getText());
@@ -219,7 +217,7 @@ public class LibraryController {
     private void updateReaderDetails() {
         if (currentSelectedReader != null) {
             String hienTai = manager.layDanhSachSachDangMuon(currentSelectedReader.getID());
-            String lichSu = manager.layLichSuMuonTra(currentSelectedReader.getID());
+            String lichSu = manager.layLichSuMuonTraReader(currentSelectedReader.getID());
             String tongHop = "ĐỘC GIẢ: " + currentSelectedReader.getName() + "\n"
                     + "Mã số: " + currentSelectedReader.getID() + "\n"
                     + "--------------------------\n"

@@ -18,7 +18,9 @@ public class LibraryManager {
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, bookID);
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) { return false; } // Lỗi nếu đang có người mượn
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     public boolean xoaDocGiaDB(String readerID) {
@@ -139,16 +141,7 @@ public class LibraryManager {
     }
 
     private void ghiLichSu(Connection conn, String readerID, String bookID, String action) throws SQLException {
-        String getBookName = "SELECT name FROM Books WHERE id = ?";
         String insertHistory = "INSERT INTO TransactionHistory (readerID, bookID, actionType) VALUES (?, ?, ?)";
-
-        String bookName = "";
-        try (PreparedStatement ps = conn.prepareStatement(getBookName)) {
-            ps.setString(1, bookID);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) bookName = rs.getString("name");
-        }
-
         try (PreparedStatement ps = conn.prepareStatement(insertHistory)) {
             ps.setString(1, readerID);
             ps.setString(2, bookID);
@@ -157,7 +150,7 @@ public class LibraryManager {
         }
     }
 
-    public String layLichSuMuonTra(String readerID) {
+    public String layLichSuMuonTraReader(String readerID) {
         StringBuilder sb = new StringBuilder("\n--- LỊCH SỬ GIAO DỊCH ---\n");
         String q = "SELECT h.bookID, b.name, h.actionType, h.transactionDate " +
                 "FROM TransactionHistory h " +
@@ -197,7 +190,7 @@ public class LibraryManager {
     public void xuatChiTietDocGiaTxt(Reader reader, String fileName) throws IOException {
         try (PrintWriter writer = new PrintWriter(fileName, "UTF-8")) {
             String hienTai = layDanhSachSachDangMuon(reader.getID());
-            String lichSu = layLichSuMuonTra(reader.getID());
+            String lichSu = layLichSuMuonTraReader(reader.getID());
 
             writer.println("===============================================================");
             writer.println("                   CHI TIẾT THÔNG TIN ĐỘC GIẢ                  ");
